@@ -1,29 +1,39 @@
+#!/usr/bin/env python3
 from simple_salesforce import Salesforce
 from dotenv import load_dotenv
 import os
 import pandas as pd
 from datetime import datetime
 import smtplib
+import requests
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 dt = datetime.now()
 
+#ping for health check
+try:
+    requests.get(os.environ['healthCheckEndpoint'], timeout=10)
+except requests.RequestException as e:
+    # log failure
+    print("ping failed: %s" % e)
+
 # configure authentication env variables
 load_dotenv()
-password=os.getenv("password")
-username=os.getenv("username")
-token=os.getenv("token")
-instance_url = os.getenv("instance_url")
-appPW = os.getenv("appPW")
-gmailUser = os.getenv("gmailUser")
+
+password=os.environ['password']
+username=os.environ['username']
+token=os.environ['token']
+instance_url=os.environ['instance_url']
+appPW=os.environ['appPW']
+gmailUser=os.environ['gmailUser']
 
 #email config
 from_address = gmailUser
 to_address = gmailUser
 msg = MIMEMultipart('alternative')
-msg['Subject'] = "Testing Email"
+msg['Subject'] = "Connected Apps Monitoring Notification"
 msg['From'] = from_address
 msg['To'] = to_address
 
@@ -31,7 +41,7 @@ msg['To'] = to_address
 sf = Salesforce(username=username, password=password, instance=instance_url, security_token=token)
 
 # create the SOQL query to get connected apps and create DataFrame
-data = sf.query(f"SELECT Name FROM ConnectedApplication")
+data = sf.query("SELECT Name FROM ConnectedApplication")
 df = pd.DataFrame(data['records'])
 
 # this is the list of values in the Name column, which represents all connected apps
@@ -40,20 +50,21 @@ appsCol = df['Name'].tolist()
 #initialize a variable to track matching values
 matching_app = ''
 
-#iterate over the list of apps and check for a match to defined terms
+word_matches = ['your', 'test', 'cases']
+
+#iterate over the list of apps and check for a match
 for i in appsCol:
-    if 'salesforce'.lower() in i.lower():
-        matching_app = 'salesforce'
+    for j in word_matches:
+        if j.lower() in i.lower():
+            matching_app = 'testMATCH'
 
-# df.drop('attributes', 1).to_csv(f'out={dt}.csv')
-#df.to_csv(f'out-{dt}.csv')
 
-if matching_app == 'salesforce':
-    html = "Salesforce Connected App Confirmed" + "<br></br>" + "<br>".join(appsCol)
+if matching_app == 'testMATCH':
+    html = "There is a match to your test phrases. See the full list of applications below." + "<br></br>" + "<br>".join(appsCol)
 else:
     html = """\
-        No matches to the defined list. See full list of connected apps below:
-        """ + "\n".join(appsCol)
+        No matches to your test phrases in connected apps. See full list of connected apps below:
+        """ + "<br></br>" + "<br>".join(appsCol)
 
 part1 = MIMEText(html, 'html')
 
