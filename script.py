@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from cgitb import text
 from simple_salesforce import Salesforce
 from dotenv import load_dotenv
 import os
@@ -6,11 +7,18 @@ import pandas as pd
 from datetime import datetime
 import smtplib
 import requests
+import tkinter as tk
 
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 dt = datetime.now()
+
+window = tk.Tk()
+window.title("Monitor Salesforce Connected Apps")
+frm_buttons = tk.Frame(window, relief=tk.RAISED, bd=2)
+
+btn_start = tk.Button(frm_buttons, text="Start")
 
 #ping for health check
 try:
@@ -79,3 +87,5 @@ server.starttls()
 server.login(username,emailPassword)  
 server.sendmail(from_address, to_address, msg.as_string())  
 server.quit()
+
+window.mainloop()
